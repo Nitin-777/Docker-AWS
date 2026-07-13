@@ -33,18 +33,28 @@ function App() {
     provider.awareness.setLocalStateField("user", { username })
     provider.awareness.on("change", ()=>{
       const states= Array.from(provider.awareness.getStates().values())
-      setUsers(states.map(state => state.user).filter(user=> Boolean(user.username)))
+      setUsers(states.filter(user=>user && user.username).map(state => state.user))
     })
 
+    function handleBeforeUnload(){
+      provider.awareness.setLocalStateField("user",null)
+    }
 
+     window.addEventListener("beforeunload", handleBeforeUnload)
+
+     
     const monacoBinding= new MonacoBinding(
       yText,
       editorRef.current.getModel(),
       new Set([editorRef.current]),
       provider.awareness
     )
+      return() =>{
+        monacoBinding.destroy()
+        provider.disconnect()
+        window.removeEventListener("beforeunliad",handleBeforeUnload)
+      }
     }
-      
   },[editorRef.current,
       username,
   ])
