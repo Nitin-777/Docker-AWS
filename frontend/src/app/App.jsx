@@ -20,20 +20,30 @@ function App() {
   const handleMount= (editor)=>{
 
     editorRef.current=editor
+      new MonacoBinding(
+            yText,
+            editorRef.current.getModel(),
+            new Set([editorRef.current]),
+    )
    
 
   }
 
   useEffect(() =>{
-    if(username && editorRef.current){
+    if(username){
      const provider= new SocketIOProvider("http://localhost:3000", "monaco", ydoc,{
       autoConnect:true,
     })
       
     provider.awareness.setLocalStateField("user", { username })
+
+     const states=Array.from(provider.awareness.getStates().values())
+
+     setUsers(states.filter(state => state.user && state.user.username).map(state=>state.user))
+
     provider.awareness.on("change", ()=>{
       const states= Array.from(provider.awareness.getStates().values())
-      setUsers(states.filter(user=>user && user.username).map(state => state.user))
+      setUsers(states.filter(state=>state && state.user.username).map(state =>state.user))
     })
 
     function handleBeforeUnload(){
@@ -43,26 +53,20 @@ function App() {
      window.addEventListener("beforeunload", handleBeforeUnload)
 
      
-    const monacoBinding= new MonacoBinding(
-      yText,
-      editorRef.current.getModel(),
-      new Set([editorRef.current]),
-      provider.awareness
-    )
+   
       return() =>{
-        monacoBinding.destroy()
         provider.disconnect()
-        window.removeEventListener("beforeunliad",handleBeforeUnload)
+        window.removeEventListener("beforeunload",handleBeforeUnload)
       }
     }
-  },[editorRef.current,
-      username,
+  },[username,
   ])
 
   const handleJoin=(e)=>{
            e.preventDefault()
            setUsername(e.target.username.value)
            window.history.pushState({},"","?username=" + e.target.username.value)
+           
 
   }
 
@@ -90,7 +94,15 @@ function App() {
   return (
      <main className='h-screen w-full bg-gray-950 flex gap-4 p-4'>
            <aside className='h-full w-1/4 bg-amber-50 rounded-lg'>
-
+                <h2 className='text-2xl font-bold p-4 border-b border-gray-300'>Users</h2>
+                <ul>
+                  {users.map((user,idx)=>(
+                    <li key={idx} className='p-2 bg-gray-800 text-white rounded mb-2'>
+                      {user.username} 
+                    </li>
+                  ) )  
+                  }
+                </ul>
            </aside>
            <section className='w-3/4 bg-neutral-800 rounded-lg overflow-hidden'>
             <Editor
